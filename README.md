@@ -291,13 +291,17 @@ cp .env.example .env
 ```
 Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from **Supabase → Project Settings → API**. The service-role key is server-only; never place it in `public/`.
 
+- **`SUPABASE_URL`** — the Project URL on the same page.
+- **`SUPABASE_SERVICE_ROLE_KEY`** — under **Project API keys**, reveal and copy the `service_role` secret (in newer dashboards this is the service-role secret key under **API Keys → Secret keys**).
+- **Anon key:** not required. The browser never talks to Supabase directly, so the server does not need the anon key. It is only kept in `.env.example` for a future browser-side client.
+
 If `.env` is missing, the server automatically uses the in-memory seed store, so the UI and tests still run.
 
 ### Step 3b: Configure Gemini AI Triage
 Add the Gemini key to the same `.env`:
 ```env
 GEMINI_API_KEY=your-google-ai-studio-key
-GEMINI_MODEL=gemini-3.5-flash
+GEMINI_MODEL=gemini-4-hydrogen
 ```
 The key is used only by `POST /api/ai/triage` and is never sent to `public/`. Without it, the rest of the app works normally and the triage button returns a clear configuration message.
 
@@ -358,7 +362,7 @@ git push -u origin main
    - `SUPABASE_URL` — your project URL
    - `SUPABASE_SERVICE_ROLE_KEY` — the service-role key (server-side only)
    - `GEMINI_API_KEY` — your Google AI Studio key (server-side only)
-   - `GEMINI_MODEL` — optional, defaults to `gemini-3.5-flash`
+   - `GEMINI_MODEL` — optional, defaults to `gemini-4-hydrogen`
 4. Apply the variables to **Production**, **Preview**, and **Development**, then click **Deploy**.
 
 ### 3. Seed the Database Once

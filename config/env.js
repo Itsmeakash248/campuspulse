@@ -38,7 +38,7 @@ const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
 const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const anonKey = (process.env.SUPABASE_ANON_KEY || '').trim();
 const geminiKey = (process.env.GEMINI_API_KEY || '').trim();
-const geminiModel = (process.env.GEMINI_MODEL || 'gemini-3.5-flash').trim();
+const geminiModel = (process.env.GEMINI_MODEL || 'gemini-4-hydrogen').trim();
 
 module.exports = {
   envPath,
@@ -46,7 +46,7 @@ module.exports = {
   SUPABASE_URL: supabaseUrl,
   SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
   SUPABASE_ANON_KEY: anonKey,
-  SUPABASE_CONFIGURED: Boolean(supabaseUrl && (serviceRoleKey || anonKey)),
+  SUPABASE_CONFIGURED: Boolean(supabaseUrl && serviceRoleKey),
   SUPABASE_HAS_SERVICE_ROLE: Boolean(supabaseUrl && serviceRoleKey),
   GEMINI_API_KEY: geminiKey,
   GEMINI_MODEL: geminiModel,

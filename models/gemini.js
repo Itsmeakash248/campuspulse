@@ -12,7 +12,7 @@ const SLA_MINUTES = { Low: 240, Medium: 240, High: 120, Critical: 60 };
 
 const configured = Boolean(env.GEMINI_API_KEY);
 
-let preferredModel = env.GEMINI_MODEL || 'gemini-3.5-flash';
+let preferredModel = env.GEMINI_MODEL || 'gemini-4-hydrogen';
 
 function candidates() {
   return [...new Set([
@@ -69,13 +69,12 @@ async function requestModel(model, prompt) {
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          responseMimeType: 'application/json',
           temperature: 0.2,
-          maxOutputTokens: 768,
+          maxOutputTokens: 1024,
           thinkingConfig: { thinkingBudget: 0 }
         }
       }),
-      signal: AbortSignal.timeout(8000)
+      signal: AbortSignal.timeout(12000)
     }
   );
 
