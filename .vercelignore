@@ -1,0 +1,9 @@
+node_modules
+.env
+.git
+.hallmark
+public/.hallmark
+dist
+test.js
+README.md
+supabase

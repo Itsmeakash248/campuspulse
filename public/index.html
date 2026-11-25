@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CampusPulse is a working lab console for BCA Lab 302: 40-seat telemetry, grievance SLAs, journal verification and a printable A4 project report.">
+  <title>CampusPulse | BCA Lab 302 operations console</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="vendor/chart.umd.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body class="mode-interactive">
+
+  <a class="skip-link" href="#main-content">Skip to the console</a>
+
+  <header class="masthead no-print">
+    <div class="container masthead-inner">
+      <a class="wordmark" href="#interactive-mode-container" aria-label="CampusPulse, back to the console">
+        <span class="wordmark-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter">
+            <path d="M4 10h6l3 6 4-12 4 20 3-8h4"></path>
+            <path d="M4 22h24"></path>
+          </svg>
+        </span>
+        <span class="wordmark-text">
+          <span class="wordmark-name">CampusPulse</span>
+          <span class="wordmark-sub">Lab 302 operations</span>
+        </span>
+      </a>
+
+      <p class="masthead-issue">BCA Semester 3<br><span>Course code 24BCA304</span></p>
+
+      <div class="mode-switch" role="group" aria-label="View mode">
+        <button id="btn-mode-interactive" class="mode-btn active" type="button" aria-pressed="true">Console</button>
+        <button id="btn-mode-report" class="mode-btn" type="button" aria-pressed="false">A4 report</button>
+      </div>
+
+      <div class="masthead-actions">
+        <span id="api-status" class="api-status" data-state="connecting" role="status" aria-live="polite">
+          <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+            <path d="M3 13.5a7 7 0 0 1 14 0"></path>
+            <path d="M6.5 14a3.5 3.5 0 0 1 7 0"></path>
+            <circle cx="10" cy="15.5" r="1"></circle>
+          </svg>
+          <span id="api-status-text">Connecting</span>
+          <span id="api-status-detail" class="api-status-detail">Express API</span>
+        </span>
+        <button id="btn-top-print" class="btn btn-quiet" type="button">
+          <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 7V3h10v4"></path>
+            <rect x="3" y="7" width="14" height="7"></rect>
+            <path d="M5 12h10v5H5z"></path>
+          </svg>
+          Print / PDF
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div id="interactive-mode-container">
+    <main id="main-content" class="container">
+
+      <section class="overview" aria-labelledby="overview-title">
+        <div class="overview-copy">
+          <p class="live-line" role="status" aria-live="polite">
+            <span class="live-badge">Live</span>
+            <span id="last-sync">Waiting for the first sync</span>
+          </p>
+          <h1 id="overview-title">The lab, in real time.</h1>
+          <p class="overview-lede">Seat, incident and journal data from BCA Lab 302, read straight from the Express API.</p>
+          <div class="overview-actions">
+            <button id="btn-refresh-data" class="btn btn-primary" type="button">
+              <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M16 6v4h-4"></path>
+                <path d="M15.2 10A5.4 5.4 0 1 0 14 14.3"></path>
+              </svg>
+              Refresh telemetry
+            </button>
+            <button class="btn btn-secondary" type="button" data-goto-tab="tab-lab-grid">Open the floor plan</button>
+          </div>
+        </div>
+
+        <aside class="console-board" aria-labelledby="console-title">
+          <div class="console-head">
+            <h2 id="console-title" class="console-title">Floor status</h2>
+            <span id="console-total" class="console-total">40 seats</span>
+          </div>
+          <div id="status-spectrum" class="status-spectrum" role="img" aria-label="Workstation status distribution">
+            <span class="spectrum-seg spectrum-available" data-status="available"></span>
+            <span class="spectrum-seg spectrum-occupied" data-status="occupied"></span>
+            <span class="spectrum-seg spectrum-maintenance" data-status="maintenance"></span>
+            <span class="spectrum-seg spectrum-offline" data-status="offline"></span>
+          </div>
+          <div class="spectrum-legend">
+            <div class="legend-row"><span class="legend-swatch swatch-available" aria-hidden="true"></span><span>Available</span><span class="legend-count" id="board-available">--</span></div>
+            <div class="legend-row"><span class="legend-swatch swatch-occupied" aria-hidden="true"></span><span>Occupied</span><span class="legend-count" id="board-occupied">--</span></div>
+            <div class="legend-row"><span class="legend-swatch swatch-maintenance" aria-hidden="true"></span><span>Maintenance</span><span class="legend-count" id="board-maintenance">--</span></div>
+            <div class="legend-row"><span class="legend-swatch swatch-offline" aria-hidden="true"></span><span>Offline</span><span class="legend-count" id="board-offline">--</span></div>
+          </div>
+          <div class="board-counts">
+            <div class="board-count"><span class="board-number" id="hero-in-use">--</span><span class="board-label">in use</span></div>
+            <div class="board-count"><span class="board-number" id="hero-attention">--</span><span class="board-label">need attention</span></div>
+            <div class="board-count"><span class="board-number" id="hero-offline">--</span><span class="board-label">offline</span></div>
+            <div class="board-count"><span class="board-number" id="hero-free">--</span><span class="board-label">free</span></div>
+          </div>
+          <div class="console-foot">
+            <button class="text-link" type="button" data-goto-tab="tab-lab-grid">Inspect the floor plan</button>
+            <span id="console-util">--% in use</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="kpi-ledger" aria-label="Key measures">
+        <div class="kpi-item">
+          <p class="kpi-label">Workstation occupancy</p>
+          <p class="kpi-value" id="kpi-workstations">-- / 40</p>
+          <p class="kpi-note" id="kpi-utilization">Waiting for data</p>
+        </div>
+        <div class="kpi-item">
+          <p class="kpi-label">Grievance tickets and SLA</p>
+          <p class="kpi-value" id="kpi-grievances">-- active</p>
+          <p class="kpi-note" id="kpi-resolved-grv">-- resolved</p>
+        </div>
+        <div class="kpi-item">
+          <p class="kpi-label">SSWD journal verification</p>
+          <p class="kpi-value" id="kpi-journals">-- verified</p>
+          <p class="kpi-note" id="kpi-journal-plagiarism">Programs 1 to 39</p>
+        </div>
+        <div class="kpi-item">
+          <p class="kpi-label">Course and faculty guide</p>
+          <p class="kpi-value kpi-value-name">Prof. Aruna Mam</p>
+          <p class="kpi-note">KLE Tech BCA, semester 3</p>
+        </div>
+      </section>
+
+      <nav class="tab-navigation" aria-label="Console sections">
+        <div class="tab-list" role="tablist" aria-label="Console sections">
+          <button id="tab-btn-lab-grid" class="tab-link active" type="button" role="tab" aria-selected="true" aria-controls="tab-lab-grid" data-tab="tab-lab-grid" tabindex="0"><span class="tab-index">01</span>Floor plan</button>
+          <button id="tab-btn-grievances" class="tab-link" type="button" role="tab" aria-selected="false" aria-controls="tab-grievances" data-tab="tab-grievances" tabindex="-1"><span class="tab-index">02</span>Grievances</button>
+          <button id="tab-btn-journals" class="tab-link" type="button" role="tab" aria-selected="false" aria-controls="tab-journals" data-tab="tab-journals" tabindex="-1"><span class="tab-index">03</span>Journal desk</button>
+          <button id="tab-btn-analytics" class="tab-link" type="button" role="tab" aria-selected="false" aria-controls="tab-analytics" data-tab="tab-analytics" tabindex="-1"><span class="tab-index">04</span>Analytics</button>
+          <button id="tab-btn-database" class="tab-link" type="button" role="tab" aria-selected="false" aria-controls="tab-database" data-tab="tab-database" tabindex="-1"><span class="tab-index">05</span>Schema</button>
+          <button id="tab-btn-code" class="tab-link" type="button" role="tab" aria-selected="false" aria-controls="tab-code" data-tab="tab-code" tabindex="-1"><span class="tab-index">06</span>Source</button>
+        </div>
+      </nav>
+
+      <section id="tab-lab-grid" class="tab-content-panel active" role="tabpanel" aria-labelledby="tab-btn-lab-grid">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">BCA Lab 302 workstation telemetry map</h2>
+            <p class="section-subtitle">Real-time occupancy, specs, network IP and student allocation for all 40 terminals.</p>
+          </div>
+          <div class="section-actions">
+            <button id="btn-help-allocate" class="btn btn-quiet" type="button" aria-expanded="false" aria-controls="allocate-note">
+              <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                <circle cx="10" cy="10" r="7.5"></circle>
+                <path d="M10 9v5"></path>
+                <circle cx="10" cy="6.4" r=".8" fill="currentColor" stroke="none"></circle>
+              </svg>
+              How to allocate
+            </button>
+          </div>
+        </div>
+
+        <div id="allocate-note" class="inline-note" hidden>
+          <p>Choose a seat to inspect its hardware and current session. An available seat opens the check-in form; an occupied seat can be released after a second confirmation click.</p>
+        </div>
+
+        <div id="lab-shell" class="lab-shell">
+          <div class="lab-toolbar">
+            <div id="workstation-filter" class="filter-chips" role="group" aria-label="Filter by seat status">
+              <button class="chip active" type="button" data-filter="all" aria-pressed="true">All <span data-count="all">40</span></button>
+              <button class="chip" type="button" data-filter="available" aria-pressed="false">Available <span data-count="available">--</span></button>
+              <button class="chip" type="button" data-filter="occupied" aria-pressed="false">Occupied <span data-count="occupied">--</span></button>
+              <button class="chip" type="button" data-filter="maintenance" aria-pressed="false">Maintenance <span data-count="maintenance">--</span></button>
+              <button class="chip" type="button" data-filter="offline" aria-pressed="false">Offline <span data-count="offline">--</span></button>
+            </div>
+            <p id="lab-filter-status" class="lab-meta">Showing all 40 seats</p>
+          </div>
+          <div class="lab-podium">
+            <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 5h14v8H3z"></path>
+              <path d="M7 17h6"></path>
+              <path d="M10 13v4"></path>
+            </svg>
+            <span>Faculty instructor podium and master projector desk</span>
+            <span class="podium-name">Prof. Aruna Mam</span>
+          </div>
+          <div id="workstation-grid" class="workstation-grid" aria-label="40 workstations in BCA Lab 302"></div>
+          <div class="grid-legend" aria-label="Seat status legend">
+            <span class="legend-item"><span class="legend-swatch swatch-available" aria-hidden="true"></span>Available</span>
+            <span class="legend-item"><span class="legend-swatch swatch-occupied" aria-hidden="true"></span>Occupied</span>
+            <span class="legend-item"><span class="legend-swatch swatch-maintenance" aria-hidden="true"></span>Maintenance</span>
+            <span class="legend-item"><span class="legend-swatch swatch-offline" aria-hidden="true"></span>Offline</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-grievances" class="tab-content-panel" role="tabpanel" aria-labelledby="tab-btn-grievances">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Lab 302 grievance &amp; SLA escalation desk</h2>
+            <p class="section-subtitle">Auto-assigned ticket triage with 60, 120 and 240 minute SLA windows.</p>
+          </div>
+          <div class="section-actions">
+            <button id="btn-open-grievance-modal" class="btn btn-primary" type="button">
+              <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+                <path d="M10 4v12"></path>
+                <path d="M4 10h12"></path>
+              </svg>
+              Log new grievance
+            </button>
+          </div>
+        </div>
+
+        <p id="grievance-summary" class="record-meta">Loading the ticket ledger.</p>
+
+        <div class="record-sheet">
+          <div class="table-responsive">
+            <table class="data-table">
+              <caption class="sr-only">Grievance tickets with seat, student, priority, issue, status, SLA and triage action.</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Ticket ID</th>
+                  <th scope="col">Seat tag</th>
+                  <th scope="col">Student</th>
+                  <th scope="col">Priority</th>
+                  <th scope="col">Issue summary</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">SLA</th>
+                  <th scope="col">Triage action</th>
+                </tr>
+              </thead>
+              <tbody id="grievance-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-journals" class="tab-content-panel" role="tabpanel" aria-labelledby="tab-btn-journals">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">SSWD digital journal verification desk</h2>
+            <p class="section-subtitle">Evaluation portal for the prescribed laboratory programs with syntax checks and viva grading.</p>
+          </div>
+          <div class="section-actions">
+            <button id="btn-help-grading" class="btn btn-quiet" type="button" aria-expanded="false" aria-controls="grading-note">
+              <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 3h10v14H5z"></path>
+                <path d="M8 7h4"></path>
+                <path d="M8 10h4"></path>
+                <path d="M8 13h2"></path>
+              </svg>
+              Rubric: 10 marks
+            </button>
+          </div>
+        </div>
+
+        <div id="grading-note" class="inline-note" hidden>
+          <p>Each submission is checked for syntax and similarity, then signed off out of 10 after the viva. Marks and comments are written back to the API.</p>
+        </div>
+
+        <div class="ledger-toolbar">
+          <div id="journal-filter" class="filter-chips" role="group" aria-label="Filter journal submissions">
+            <button class="chip active" type="button" data-journal-filter="all" aria-pressed="true">All <span data-count="all">--</span></button>
+            <button class="chip" type="button" data-journal-filter="verified" aria-pressed="false">Verified <span data-count="verified">--</span></button>
+            <button class="chip" type="button" data-journal-filter="pending" aria-pressed="false">Awaiting viva <span data-count="pending">--</span></button>
+          </div>
+          <p id="journal-summary" class="record-meta">Loading the journal ledger.</p>
+        </div>
+
+        <div class="record-sheet">
+          <div class="table-responsive">
+            <table class="data-table">
+              <caption class="sr-only">Journal submissions with program, student, similarity score, marks, status and grading action.</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Program</th>
+                  <th scope="col">Title &amp; module</th>
+                  <th scope="col">Student</th>
+                  <th scope="col">Similarity</th>
+                  <th scope="col">Marks (out of 10)</th>
+                  <th scope="col">Evaluation status</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody id="journal-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-analytics" class="tab-content-panel" role="tabpanel" aria-labelledby="tab-btn-analytics">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Laboratory telemetry &amp; operational analytics</h2>
+            <p class="section-subtitle">Live resource utilisation, incident categories and submission status.</p>
+          </div>
+        </div>
+
+        <div class="panel-grid-2">
+          <figure class="chart-panel">
+            <figcaption class="chart-head">
+              <h3 class="chart-title">Workstation status distribution</h3>
+              <span class="chart-note">All 40 seats</span>
+            </figcaption>
+            <div class="chart-frame">
+              <canvas id="chart-workstation-status" role="img" aria-label="Doughnut chart of workstation status: available, occupied, maintenance and offline."></canvas>
+            </div>
+            <p id="chart-status-summary" class="chart-summary">Waiting for the floor data.</p>
+          </figure>
+
+          <figure class="chart-panel">
+            <figcaption class="chart-head">
+              <h3 class="chart-title">Grievance incidents by category</h3>
+              <span class="chart-note">Open and resolved</span>
+            </figcaption>
+            <div class="chart-frame">
+              <canvas id="chart-grievances-category" role="img" aria-label="Bar chart of grievance incidents by category: hardware, software, network, peripheral and power."></canvas>
+            </div>
+            <p id="chart-grievance-summary" class="chart-summary">Waiting for the ticket data.</p>
+          </figure>
+        </div>
+      </section>
+
+      <section id="tab-database" class="tab-content-panel" role="tabpanel" aria-labelledby="tab-btn-database">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Supabase Postgres tables &amp; entity relationship design</h2>
+            <p class="section-subtitle">Relational tables and JSONB columns persisted in Supabase for the SSWD project.</p>
+          </div>
+        </div>
+
+        <div class="schema-grid">
+          <section class="schema-sheet">
+            <div class="schema-head"><h3 class="schema-title">Table 1: users</h3><span class="schema-meta">identity</span></div>
+            <p class="schema-desc">Academic identities, roll numbers, roles and access levels.</p>
+            <pre class="schema-code"><code>create table users (
+  id text primary key,
+  name text not null,
+  usn text unique not null,
+  roll_no text not null,
+  email text not null,
+  role text check (role in ('student', 'faculty', 'admin')),
+  specialization text,
+  created_at timestamptz default now()
+);</code></pre>
+          </section>
+
+          <section class="schema-sheet">
+            <div class="schema-head"><h3 class="schema-title">Table 2: lab_assets</h3><span class="schema-meta">40 seats</span></div>
+            <p class="schema-desc">Operational state, hardware, network address and occupant for each terminal.</p>
+            <pre class="schema-code"><code>create table lab_assets (
+  id text primary key,
+  tag text unique not null,
+  seat_no integer not null,
+  row_no integer not null,
+  status text check (status in (
+    'available', 'occupied', 'maintenance', 'offline'
+  )),
+  assigned_to text,
+  student_name text,
+  current_program text,
+  specs jsonb,
+  ip_address text,
+  last_heartbeat timestamptz,
+  issue_count integer default 0
+);</code></pre>
+          </section>
+
+          <section class="schema-sheet">
+            <div class="schema-head"><h3 class="schema-title">Table 3: grievances</h3><span class="schema-meta">SLA ledger</span></div>
+            <p class="schema-desc">Incident tickets with category, priority, lifecycle state and resolution notes.</p>
+            <pre class="schema-code"><code>create table grievances (
+  id text primary key,
+  ticket_id text unique not null,
+  workstation_tag text not null,
+  student_usn text not null,
+  category text check (category in (
+    'Hardware', 'Software', 'Network', 'Peripheral', 'Power'
+  )),
+  priority text check (priority in (
+    'Low', 'Medium', 'High', 'Critical'
+  )),
+  title text not null,
+  status text check (status in (
+    'PENDING', 'IN_REVIEW', 'RESOLVED', 'CLOSED'
+  )),
+  sla_minutes integer default 240,
+  resolution_notes text default ''
+);</code></pre>
+          </section>
+
+          <section class="schema-sheet">
+            <div class="schema-head"><h3 class="schema-title">Table 4: journal_submissions</h3><span class="schema-meta">viva ledger</span></div>
+            <p class="schema-desc">Program submissions, similarity scores, syntax checks and faculty sign-off.</p>
+            <pre class="schema-code"><code>create table journal_submissions (
+  id text primary key,
+  program_number integer not null,
+  program_title text not null,
+  student_usn text not null,
+  status text check (status in (
+    'DRAFT', 'SUBMITTED', 'VERIFIED', 'REVISION_REQUIRED'
+  )),
+  plagiarism_score numeric(4, 1),
+  syntax_validation_passed boolean,
+  marks_awarded numeric(4, 1),
+  faculty_comments text,
+  verified_by text
+);</code></pre>
+          </section>
+
+          <section class="schema-sheet">
+            <div class="schema-head"><h3 class="schema-title">Table 5: asset_allocations</h3><span class="schema-meta">session log</span></div>
+            <p class="schema-desc">Check-in and check-out history for every seat allocation.</p>
+            <pre class="schema-code"><code>create table asset_allocations (
+  id text primary key,
+  workstation_tag text not null,
+  seat_no integer,
+  usn text not null,
+  student_name text,
+  check_in_time timestamptz default now(),
+  check_out_time timestamptz,
+  session_purpose text,
+  session_status text check (session_status in (
+    'active', 'completed'
+  ))
+);</code></pre>
+          </section>
+
+          <section class="schema-sheet">
+            <div class="schema-head"><h3 class="schema-title">Table 6: audit_logs</h3><span class="schema-meta">telemetry</span></div>
+            <p class="schema-desc">Append-only operational events for allocations, tickets and grading.</p>
+            <pre class="schema-code"><code>create table audit_logs (
+  id text primary key,
+  timestamp timestamptz default now(),
+  action text not null,
+  actor text,
+  details text,
+  ip text
+);</code></pre>
+          </section>
+        </div>
+      </section>
+
+      <section id="tab-code" class="tab-content-panel" role="tabpanel" aria-labelledby="tab-btn-code">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">CampusPulse source code inspector</h2>
+            <p class="section-subtitle">The server runtime, routes, models and middleware served live from the API.</p>
+          </div>
+        </div>
+        <div id="code-inspector-container"></div>
+      </section>
+
+    </main>
+
+    <footer id="site-footer" class="colophon no-print">
+      <div class="container">
+        <div class="colophon-grid">
+          <div>
+            <p class="colophon-name">CampusPulse</p>
+            <p class="colophon-text">A working lab console for BCA Lab 302, built for the Server Side Web Development course.</p>
+          </div>
+          <div>
+            <p class="colophon-label">Course</p>
+            <p class="colophon-text">Server Side Web Development<br>24BCA304, semester 3</p>
+          </div>
+          <div>
+            <p class="colophon-label">Student</p>
+            <p class="colophon-text">Akash</p>
+          </div>
+          <div>
+            <p class="colophon-label">Faculty guide</p>
+            <p class="colophon-text">Prof. Aruna Mam<br>Department of BCA<br>KLE Technological University</p>
+          </div>
+        </div>
+        <div class="colophon-foot">
+          <span>KLE Technological University, Hubballi</span>
+          <span>BCA Lab 302</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <div id="report-mode-container" hidden>
+    <div class="report-toolbar no-print">
+      <div class="container report-toolbar-inner">
+        <div class="report-toolbar-copy">
+          <p class="report-toolbar-title">A4 project report</p>
+          <p class="report-toolbar-note">Ten pages, set for A4 print. This is the screen preview.</p>
+        </div>
+        <div class="report-toolbar-controls">
+          <label class="form-label sr-only" for="select-a4-page">Jump to report page</label>
+          <select id="select-a4-page" class="form-control">
+            <option value="a4-page-1">Page 1: Title and cover</option>
+            <option value="a4-page-2">Page 2: Student declaration</option>
+            <option value="a4-page-3">Page 3: Abstract and introduction</option>
+            <option value="a4-page-4">Page 4: Problem and objectives</option>
+            <option value="a4-page-5">Page 5: Scope and technologies</option>
+            <option value="a4-page-6">Page 6: Database design, part 1</option>
+            <option value="a4-page-7">Page 7: Database design, part 2</option>
+            <option value="a4-page-8">Page 8: Source code, part 1</option>
+            <option value="a4-page-9">Page 9: Source code, part 2</option>
+            <option value="a4-page-10">Page 10: UI screenshots and conclusion</option>
+          </select>
+          <button id="btn-print-report" class="btn btn-primary" type="button">
+            <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 7V3h10v4"></path>
+              <rect x="3" y="7" width="14" height="7"></rect>
+              <path d="M5 12h10v5H5z"></path>
+            </svg>
+            Print / save PDF
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="a4-preview-wrapper">
+            <!-- ================= PAGE 1: TITLE & COVER PAGE ================= -->
+      <article class="a4-page" id="a4-page-1">
+        <div class="a4-running-header">
+          <span>KLE Technological University, Hubballi</span>
+          <span>BCA Semester 3 Course Project Report</span>
+        </div>
+
+        <div class="a4-page-content report-cover-content">
+          <div class="cover-header-crest">
+            <div class="cover-uni-name">KLE Technological University</div>
+            <div class="cover-subline">Hubballi, Karnataka, India</div>
+            <div class="cover-dept-name">School of Computer Science & Applications<br>Department of Bachelor of Computer Applications (BCA)</div>
+            <div class="cover-divider-rule"></div>
+          </div>
+
+          <div class="cover-title-box">
+            <div class="cover-project-label">Course project report, academic year 2024-2025</div>
+            <h1 class="cover-project-topic">CampusPulse SSWD Platform</h1>
+            <p class="cover-project-subtitle">Smart campus lab resource, grievance resolution and digital journal verification platform</p>
+            <div class="cover-course-line">
+              Course: Server Side Web Development (SSWD), course code 24BCA304
+            </div>
+          </div>
+
+          <div class="cover-personnel-grid">
+            <div class="personnel-box">
+              <h2 class="personnel-heading">Project member</h2>
+              <p><strong>Akash</strong>, USN: <code>01FE25BCA209</code> (Roll: 209)</p>
+            </div>
+            <div class="personnel-box">
+              <h2 class="personnel-heading">Faculty guide</h2>
+              <p><strong>Prof. Aruna Mam</strong></p>
+              <p>Assistant Professor & Course Instructor</p>
+              <p>Department of BCA</p>
+              <p>KLE Technological University, Hubballi</p>
+            </div>
+          </div>
+
+          <div class="cover-submission">
+            Submitted in partial fulfillment of the academic requirements for the Bachelor of Computer Applications (Semester 3) Laboratory Journal.
+          </div>
+        </div>
+
+        <div class="a4-running-footer">
+          <span>CampusPulse SSWD Report</span>
+          <span>Page 1 of 10</span>
+        </div>
+      </article>
+
+      <!-- ================= PAGE 2: STUDENT DECLARATION ================= -->
+      <article class="a4-page" id="a4-page-2">
+        <div class="a4-running-header">
+          <span>KLE Technological University, Department of BCA</span>
+          <span>Student Declaration</span>
+        </div>
+
+        <div class="a4-page-content declaration-content">
+          <h2 class="section-heading report-center-heading">Student declaration</h2>
+          <p>
+            I, <strong>Akash</strong> (USN: <code>01FE25BCA209</code>), a student of Bachelor of Computer Applications (Semester 3), KLE Technological University, Hubballi, hereby declare that the course project entitled <strong>“CampusPulse: Smart campus lab resource, grievance resolution and digital journal verification platform”</strong> is an authentic record of my own original work executed under the guidance of <strong>Prof. Aruna Mam</strong> for the course <em>Server Side Web Development (SSWD - 24BCA304)</em> during the academic year 2024-2025.
+          </p>
+          <p>
+            I confirm that this report covers all prescribed syllabus topics, accurately reflects the actual architectural implementation of the Express.js and Node.js REST API with Supabase Postgres data modeling, and has not been submitted elsewhere for the award of any degree or diploma.
+          </p>
+
+          <div class="declaration-submission">
+            <p class="declaration-submission-label">Submitted by</p>
+            <p class="declaration-submission-name">Akash</p>
+            <p class="declaration-submission-meta">USN 01FE25BCA209<br>BCA Semester 3, Server Side Web Development (24BCA304)</p>
+          </div>
+        </div>
+
+        <div class="a4-running-footer">
+          <span>CampusPulse SSWD Report</span>
+          <span>Page 2 of 10</span>
+        </div>
+      </article>
+
+      <!-- ================= PAGE 3: ABSTRACT & TOPIC 1 ================= -->
+      <article class="a4-page" id="a4-page-3">
+        <div class="a4-running-header">
+          <span>CampusPulse SSWD Project Report</span>
+          <span>Section 1: Executive Abstract & Introduction</span>
+        </div>
+
+        <div class="a4-page-content">
+          <h2 class="section-heading">Executive abstract</h2>
+          <p>
+            In contemporary university computer science education, laboratory environments serve as the crucible where theoretical constructs materialize into operational software systems. However, managing physical computing infrastructure, tracking concurrent workstation utilization, resolving rapid hardware/software incidents, and evaluating hundreds of student laboratory programs remain overwhelmingly bottlenecked by fragmented manual paper registers. <strong>CampusPulse</strong> is a comprehensive, production-grade web platform engineered specifically for the Server Side Web Development (SSWD) curriculum at KLE Technological University, Hubballi.
+          </p>
+          <p>
+            Engineered with a modular Node.js runtime, an Express.js RESTful routing architecture, and a schema-validated Supabase Postgres store, CampusPulse establishes end-to-end telemetry across all 40 physical workstations in BCA Lab 302. The platform introduces: (1) a real-time terminal map showing hardware specifications and student occupancy, (2) an SLA-driven grievance escalation engine with priority ticketing, and (3) a digital laboratory journal verification desk supporting all 39 course laboratory programs with automated syntax linting, plagiarism similarity indexing, and faculty viva grading.
+          </p>
+
+          <h2 class="section-heading">1. Introduction to the project</h2>
+          <h3 class="subsection-heading">1.1 Background & Context</h3>
+          <p>
+            The Department of Bachelor of Computer Applications (BCA) at KLE Technological University conducts intensive practical sessions in Server Side Web Development (SSWD - Course Code 24BCA304). The syllabus encompasses modern ECMAScript standards, asynchronous EventLoop processing, file stream manipulation, custom HTTP server orchestration, Express middleware design, and both MongoDB and relational (Postgres) CRUD operations. A dedicated batch of 60 students utilizes BCA Lab 302 across 40 networked workstation terminals.
+          </p>
+
+          <h3 class="subsection-heading">1.2 Architectural Motivation</h3>
+          <p>
+            Prior to CampusPulse, lab attendance, terminal assignment, and incident reporting were tracked in physical paper logbooks. When a student encountered a peripheral failure (e.g., keyboard key defect, network disconnection during <code>npm install</code>, or database service daemon permission locks), reporting the incident required manual physical intervention. Furthermore, evaluating the 39 required SSWD laboratory programs consumed hours of laboratory time due to manual code review and viva verification. CampusPulse transitions these workflows into an instantaneous, asynchronous server-side web platform.
+          </p>
+
+          <table class="a4-table">
+            <thead>
+              <tr>
+                <th>Operational Metric</th>
+                <th>Traditional Manual Lab Workflow</th>
+                <th>CampusPulse Automated Solution</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Seat Allocation</strong></td>
+                <td>Paper log register sign-in (~5-7 mins/student)</td>
+                <td>Instant 1-click terminal lock via REST API (&lt;1s)</td>
+              </tr>
+              <tr>
+                <td><strong>Hardware Incident Triage</strong></td>
+                <td>Verbal complaint to lab assistant; high delay</td>
+                <td>Automated ticket creation with strict SLA countdown</td>
+              </tr>
+              <tr>
+                <td><strong>Journal Program Evaluation</strong></td>
+                <td>Physical journal submission and manual checking</td>
+                <td>Digital code linting, plagiarism score & viva marks</td>
+              </tr>
+              <tr>
+                <td><strong>Audit & Telemetry</strong></td>
+                <td>No centralized historical audit records</td>
+                <td>Immutable JSON audit trail with timestamps and IP</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="a4-running-footer">
+          <span>CampusPulse SSWD Report</span>
+          <span>Page 3 of 10</span>
+        </div>
+      </article>
+
+      <!-- ================= PAGE 4: TOPIC 2 & TOPIC 3 ================= -->
+      <article class="a4-page" id="a4-page-4">
+        <div class="a4-running-header">
+          <span>CampusPulse SSWD Project Report</span>
+          <span>Section 2 & 3: Problem Statement & Objectives</span>
+        </div>
+
+        <div class="a4-page-content">
+          <h2 class="section-heading">2. Problem statement</h2>
+          <p>
+            Laboratory administration in academic institutions faces persistent friction due to the lack of interconnected server-side systems. Specifically, the operation of BCA Lab 302 under the SSWD curriculum exhibited the following critical problems:
+          </p>
+          <ol>
+            <li>
+              <strong>Uncontrolled Workstation Concurrency & Resource Contention:</strong> With 60 students enrolled and 40 physical workstations, simultaneous check-ins led to seat disputes, unverified system occupancy, and untracked terminal swapping during active coding evaluations.
+            </li>
+            <li>
+              <strong>Latent Hardware &amp; Software Incident Resolution:</strong> High-demand programming tasks (such as running multi-threaded Node.js scripts, compiling native C++ bindings, or running local database daemons) frequently encounter hardware peripheral faults or network socket drops. In the absence of a computerized triage system, workstations remained in unmonitored downtime for days.
+            </li>
+            <li>
+              <strong>Evaluation Bottlenecks Across 39 Prescribed Lab Programs:</strong> The SSWD curriculum mandates rigorous completion of 39 foundational laboratory programs. Manually grading code structure, checking plagiarism, and recording viva marks across 60 students represents 2,340 individual evaluation transactions per semester, causing substantial grading latency.
+            </li>
+            <li>
+              <strong>Absence of Verifiable Audit Logs & Academic Accountability:</strong> Physical logs cannot prevent unauthorized retro-active timestamping or maintain tamper-evident historical operational records required for university academic quality audits (NBA / NAAC compliance).
+            </li>
+          </ol>
+
+          <h2 class="section-heading">3. Objectives of the project</h2>
+          <p>
+            The primary aim of CampusPulse is to engineer a resilient, highly available server-side platform resolving the aforementioned institutional challenges. The core objectives are systematically defined as follows:
+          </p>
+          <ul>
+            <li>
+              <strong>Real-Time 40-Terminal Telemetry Engine:</strong> Develop a dynamic server-side resource registry mapping the operational state (Available, Occupied, Maintenance, Offline), hardware specifications, IP allocations, and active student USNs for all 40 workstations in BCA Lab 302.
+            </li>
+            <li>
+              <strong>SLA-Driven Grievance Escalation & Incident Management:</strong> Implement a schema-checked RESTful ticketing pipeline that categorizes incidents into Hardware, Software, Network, Peripheral, and Power, automatically enforcing Service Level Agreement (SLA) timers of 60, 120, and 240 minutes.
+            </li>
+            <li>
+              <strong>Digital Laboratory Journal Verification Desk:</strong> Provide an integrated evaluation portal tracking student progress across all 39 SSWD syllabus programs, providing automated syntax validation, plagiarism score calculations, and faculty viva grading with instant 10-mark scoring.
+            </li>
+            <li>
+              <strong>Strict Academic Report & Journal Integration:</strong> Design an A4 print engine with precise page boundaries, allowing students to generate an official 10-page project report complete with faculty sign-off and university credentials for attachment to their physical journal.
+            </li>
+            <li>
+              <strong>RESTful API Architecture &amp; Concurrency Control:</strong> Adhere to modern Server Side Web Development conventions by implementing decoupled Express route handlers, CORS-compliant gateways, centralized error-handling middleware, and Postgres constraints enforced through Supabase.
+            </li>
+          </ul>
+        </div>
+
+        <div class="a4-running-footer">
+          <span>CampusPulse SSWD Report</span>
+          <span>Page 4 of 10</span>
+        </div>
+      </article>
+
+      <!-- ================= PAGE 5: TOPIC 4 & TOPIC 5 ================= -->
+      <article class="a4-page" id="a4-page-5">
+        <div class="a4-running-header">
+          <span>CampusPulse SSWD Project Report</span>
+          <span>Section 4 & 5: Scope & Technologies Used</span>
+        </div>
+
+        <div class="a4-page-content">
+          <h2 class="section-heading">4. Scope of the project</h2>
+          <h3 class="subsection-heading">4.1 Functional Scope</h3>
+          <p>
+            CampusPulse encompasses role-based workflows for students, faculty guides (Prof. Aruna Mam), and laboratory systems administrators. Its functional boundaries include:
+          </p>
+          <ul>
+            <li><strong>Workstation Asset Management:</strong> 40 workstation nodes with seat booking, status updates, specs inspection, and release operations.</li>
+            <li><strong>Incident Lifecycle Management:</strong> Ticket generation, priority assignment (Low, Medium, High, Critical), status transitions (PENDING &rarr; IN_REVIEW &rarr; RESOLVED &rarr; CLOSED), and resolution note logging.</li>
+            <li><strong>Laboratory Journal Workflow:</strong> Program submissions (Programs 1-39), automated syntax parsing, plagiarism score computation, and viva marks recording.</li>
+            <li><strong>Operational Analytics:</strong> Live metric computation for lab utilization rate, incident category frequencies, and submission velocities.</li>
+          </ul>
+
+          <h3 class="subsection-heading">4.2 Non-Functional Scope & Scalability</h3>
+          <p>
+            The system is designed with sub-50ms API response latency, asynchronous non-blocking event loop execution, responsive mobile/desktop interfaces, and strict A4 printable styling conforming to ISO 216 dimensions (210mm x 297mm).
+          </p>
+
+          <h2 class="section-heading">5. Technologies used</h2>
+          <p>
+            The technology stack was chosen to reflect the core competencies of the BCA Semester 3 Server Side Web Development curriculum:
+          </p>
+
+          <table class="a4-table">
+            <thead>
+              <tr>
+                <th>Layer</th>
+                <th>Technology / Tool</th>
+                <th>Version</th>
+                <th>Role in CampusPulse Platform</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Runtime Environment</strong></td>
+                <td>Node.js</td>
+                <td>v20.11.0 LTS</td>
+                <td>Asynchronous, non-blocking single-threaded event loop for handling concurrent HTTP requests.</td>
+              </tr>
+              <tr>
+                <td><strong>Backend Framework</strong></td>
+                <td>Express.js</td>
+                <td>v4.19.2</td>
+                <td>RESTful API routing, JSON body parsing, CORS management, and centralized error middleware.</td>
+              </tr>
+              <tr>
+                <td><strong>Database Engine</strong></td>
+                <td>Supabase Postgres &amp; supabase-js</td>
+                <td>Postgres 15 / 2.119</td>
+                <td>Relational storage with JSONB hardware specs, CHECK constraints, indexes and RLS; accessed only by the Express server.</td>
+              </tr>
+              <tr>
+                <td><strong>Client Interface</strong></td>
+                <td>HTML5, CSS3, JavaScript (ES6+)</td>
+                <td>Modern Standards</td>
+                <td>Responsive single-page application with glassmorphic cyber styling and live DOM updating.</td>
+              </tr>
+              <tr>
+                <td><strong>Telemetry & Charts</strong></td>
+                <td>Chart.js</td>
+                <td>v4.4.1</td>
+                <td>Interactive HTML5 Canvas visualizations for workstation utilization and incident categorisation.</td>
+              </tr>
+              <tr>
+                <td><strong>Document Print Engine</strong></td>
+                <td>CSS Paged Media Module</td>
+                <td>Level 3</td>
+                <td>Strict <code>@page</code> and <code>@media print</code> rules for generating A4 physical journal sheets.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="a4-running-footer">
+          <span>CampusPulse SSWD Report</span>
+          <span>Page 5 of 10</span>
+        </div>
+      </article>
+
+      <!-- ================= PAGE 6: TOPIC 6 (DATABASE DESIGN PART 1) ================= -->
+      <article class="a4-page" id="a4-page-6">
+        <div class="a4-running-header">
+          <span>CampusPulse SSWD Project Report</span>
+          <span>Section 6: Database Design & Schemas (Part 1)</span>
+        </div>
+
+        <div class="a4-page-content">
+          <h2 class="section-heading">6. Database design / tables (part 1)</h2>
+          <h3 class="subsection-heading">6.1 Database Architectural Overview</h3>
+          <p>
+            CampusPulse persists its operational data in a Supabase-hosted Postgres database. Six relational tables hold workstations, allocation sessions, grievance tickets, journal submissions, users, and audit events, while a JSONB column carries variable hardware specifications. Postgres <code>CHECK</code> constraints enforce status and priority domains, indexes support the live dashboard queries, and Row Level Security blocks direct client access. Only the Express server writes to the database through the service-role key, which never leaves the server. A mapper layer translates snake_case rows into the camelCase JSON contract consumed by the browser.
+          </p>
+
+          <h3 class="subsection-heading">6.2 Table 1: <code>users</code></h3>
+          <p>Maintains academic identities, university roll numbers, roles, and authorization levels.</p>
+          <table class="a4-table">
+            <thead>
+              <tr>
+                <th>Field Name</th>
+                <th>Postgres Data Type</th>
+                <th>Constraint / Validation</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>id</code></td><td>text</td><td>Primary Key</td><td>Unique User Identifier</td></tr>
+              <tr><td><code>name</code></td><td>text</td><td>Required, Trimmed</td><td>Student or Faculty Full Name</td></tr>
+              <tr><td><code>usn</code></td><td>text</td><td>Required, Unique, Uppercase</td><td>University Seat Number (e.g., 01FE25BCA209)</td></tr>
+              <tr><td><code>roll_no</code></td><td>text</td><td>Optional</td><td>Department Roll Number (e.g., 209)</td></tr>
+              <tr><td><code>email</code></td><td>text</td><td>Optional</td><td>Official KLE Tech institutional email</td></tr>
+              <tr><td><code>role</code></td><td>text</td><td>CHECK (role IN ('student','faculty','admin'))</td><td>Access control privilege level</td></tr>
+              <tr><td><code>created_at</code></td><td>timestamptz</td><td>default now()</td><td>Record creation timestamp</td></tr>
+            </tbody>
+          </table>
+
+          <h3 class="subsection-heading">6.3 Table 2: <code>lab_assets</code> (40 Workstations)</h3>
+          <p>Tracks the operational health, hardware specs, network IP, and active seat occupant for Lab 302.</p>
+          <table class="a4-table">
+            <thead>
+              <tr>
+                <th>Field Name</th>
+                <th>Postgres Data Type</th>
+                <th>Constraint / Validation</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>id</code></td><td>text</td><td>Primary Key</td><td>Unique Asset Identifier</td></tr>
+              <tr><td><code>tag</code></td><td>text</td><td>Required, Unique ('PC-01'..'PC-40')</td><td>Physical Workstation Label Tag</td></tr>
+              <tr><td><code>seat_no</code></td><td>integer</td><td>Required, Min: 1, Max: 40</td><td>Physical laboratory seat position</td></tr>
+              <tr><td><code>status</code></td><td>text</td><td>CHECK (status IN ('available','occupied','maintenance','offline'))</td><td>Terminal availability state</td></tr>
+              <tr><td><code>assigned_to</code></td><td>text</td><td>Nullable</td><td>USN of current occupant</td></tr>
+              <tr><td><code>specs</code></td><td>jsonb</td><td>default '{}'::jsonb</td><td>CPU, RAM, storage, OS and installed software</td></tr>
+              <tr><td><code>ip_address</code></td><td>text</td><td>Optional</td><td>Static laboratory IP (192.168.302.xxx)</td></tr>
+              <tr><td><code>issue_count</code></td><td>integer</td><td>default 0</td><td>Incidents linked to the terminal</td></tr>
+            </tbody>
+          </table>
+
+          <h3 class="subsection-heading">6.4 Table 3: <code>asset_allocations</code></h3>
+          <p>Maintains temporal session logs of student check-ins and check-outs.</p>
+          <table class="a4-table">
+            <thead>
+              <tr>
+                <th>Field Name</th>
+                <th>Postgres Data Type</th>
+                <th>Constraint / Validation</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>id</code></td><td>text</td><td>Primary Key</td><td>Allocation Transaction Identifier</td></tr>
+              <tr><td><code>workstation_tag</code></td><td>text</td><td>Foreign Ref &rarr; lab_assets.tag</td><td>Allocated terminal tag</td></tr>
+              <tr><td><code>usn</code></td><td>text</td><td>Foreign Ref &rarr; users.usn</td><td>Allocated student USN</td></tr>
+              <tr><td><code>check_in_time</code></td><td>timestamptz</td><td>default now()</td><td>Session commencement timestamp</td></tr>
+              <tr><td><code>session_status</code></td><td>text</td><td>CHECK (session_status IN ('active','completed'))</td><td>Current status of session</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="a4-running-footer">
+          <span>CampusPulse SSWD Report</span>
+          <span>Page 6 of 10</span>
+        </div>
+      </article>
+
+      <!-- ================= PAGE 7: TOPIC 6 (DATABASE DESIGN PART 2) ================= -->
+      <article class="a4-page" id="a4-page-7">
+        <div class="a4-running-header">
+          <span>CampusPulse SSWD Project Report</span>
+          <span>Section 6: Database Design & Schemas (Part 2)</span>
+        </div>
+
+        <div class="a4-page-content">
+          <h2 class="section-heading">6. Database design / tables (part 2)</h2>
+          
+          <h3 class="subsection-heading">6.5 Table 4: <code>grievances</code> (SLA Incident Desk)</h3>
+          <p>Encapsulates laboratory hardware, software, and networking issues with SLA timers.</p>
+          <table class="a4-table">
+            <thead>
+              <tr>
+                <th>Field Name</th>
+                <th>Postgres Data Type</th>
+                <th>Constraint / Validation</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>id</code></td><td>text</td><td>Primary Key</td><td>Unique Ticket Database Identifier</td></tr>
+              <tr><td><code>ticket_id</code></td><td>text</td><td>Required, Unique ('TKT-302-xx')</td><td>Human-readable ticket code</td></tr>
+              <tr><td><code>workstation_tag</code></td><td>text</td><td>Required, Ref &rarr; lab_assets.tag</td><td>Affected terminal number</td></tr>
+              <tr><td><code>student_usn</code></td><td>text</td><td>Required, Ref &rarr; users.usn</td><td>Reporting student USN</td></tr>
+              <tr><td><code>category</code></td><td>text</td><td>CHECK (category IN ('Hardware','Software','Network','Peripheral','Power'))</td><td>Incident classification</td></tr>
+              <tr><td><code>priority</code></td><td>text</td><td>CHECK (priority IN ('Low','Medium','High','Critical'))</td><td>Severity &amp; SLA determinator</td></tr>
+              <tr><td><code>status</code></td><td>text</td><td>CHECK (status IN ('PENDING','IN_REVIEW','RESOLVED','CLOSED'))</td><td>Lifecycle stage of resolution</td></tr>
+              <tr><td><code>sla_minutes</code></td><td>integer</td><td>Critical: 60, High: 120, Med: 240</td><td>Target SLA resolution window</td></tr>
+              <tr><td><code>resolution_notes</code></td><td>text</td><td>Default: ''</td><td>Technical remarks entered upon fix</td></tr>
+            </tbody>
+          </table>
+
+          <h3 class="subsection-heading">6.6 Table 5: <code>journal_submissions</code> (SSWD Programs 1-39)</h3>
+          <p>Maintains academic records for the 39 prescribed laboratory exercises, viva scores, and feedback.</p>
+          <table class="a4-table">
+            <thead>
+              <tr>
+                <th>Field Name</th>
+                <th>Postgres Data Type</th>
+                <th>Constraint / Validation</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>id</code></td><td>text</td><td>Primary Key</td><td>Submission Database Record ID</td></tr>
+              <tr><td><code>program_number</code></td><td>integer</td><td>Required, Min: 1, Max: 39</td><td>Prescribed SSWD lab exercise number</td></tr>
+              <tr><td><code>program_title</code></td><td>text</td><td>Required, Trimmed</td><td>Syllabus topic name of the exercise</td></tr>
+              <tr><td><code>student_usn</code></td><td>text</td><td>Required, Ref &rarr; users.usn</td><td>Submitting student USN</td></tr>
+              <tr><td><code>status</code></td><td>text</td><td>CHECK (status IN ('DRAFT','SUBMITTED','VERIFIED','REVISION_REQUIRED'))</td><td>Verification workflow state</td></tr>
+              <tr><td><code>plagiarism_score</code></td><td>numeric(4,1)</td><td>Percentage (0.0 to 100.0)</td><td>Code similarity index score</td></tr>
+              <tr><td><code>marks_awarded</code></td><td>numeric(4,1)</td><td>Min: 0, Max: 10, Default: null</td><td>Evaluator viva score (out of 10)</td></tr>
+              <tr><td><code>verified_by</code></td><td>text</td><td>Default: 'Prof. Aruna Mam'</td><td>Faculty instructor digital signature</td></tr>
+            </tbody>
+          </table>
+
+          <h3 class="subsection-heading">6.7 Table 6: <code>audit_logs</code> (Security & Telemetry Trail)</h3>
+          <p>Immutable event stream capturing all administrative transactions and security operations.</p>
+          <table class="a4-table">
+            <thead>
+              <tr>
+                <th>Field Name</th>
+                <th>Postgres Data Type</th>
+                <th>Constraint / Validation</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>id</code></td><td>text</td><td>Primary Key</td><td>Log Entry Unique Identifier</td></tr>
+              <tr><td><code>timestamp</code></td><td>timestamptz</td><td>default now()</td><td>Precise ISO timestamp of action</td></tr>
+              <tr><td><code>action</code></td><td>text</td><td>Required</td><td>Action tag (e.g. WORKSTATION_ALLOCATED)</td></tr>
+              <tr><td><code>actor</code></td><td>text</td><td>Required</td><td>USN or Admin Username initiating action</td></tr>
+              <tr><td><code>details</code></td><td>text</td><td>Required</td><td>Detailed description of transaction</td></tr>
+              <tr><td><code>ip</code></td><td>text</td><td>IPv4 Format</td><td>Client IP address captured by Express</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="a4-running-footer">
+          <span>CampusPulse SSWD Report</span>
+          <span>Page 7 of 10</span>
+        </div>
+      </article>
+
+      <!-- ================= PAGE 8: TOPIC 7 (SOURCE CODE PART 1) ================= -->
+      <article class="a4-page" id="a4-page-8">
+        <div class="a4-running-header">
+          <span>CampusPulse SSWD Project Report</span>
+          <span>Section 7: Source Code Screenshots & Implementations (Part 1)</span>
+        </div>
+
+        <div class="a4-page-content">
+          <h2 class="section-heading">7. Screenshots of the source code (part 1)</h2>
+          <h3 class="subsection-heading">7.1 Express Application Bootstrap & Middleware Pipeline (<code>server.js</code>)</h3>
+          <p>
+            Demonstrates the server instantiation, CORS configuration, JSON body parsing, custom HTTP request latency logging middleware, static asset routing, and centralized error handling middleware.
+          </p>
+
+          <div class="a4-code-snippet">// server.js: Express Server Runtime & Pipeline
+const env = require('./config/env');
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const apiRouter = require('./routes/api');
+const store = require('./models/store');
+
+const app = express();
+const PORT = env.PORT || 3000;
+
+// Security & Parsing Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Custom Request Logger Middleware with High-Resolution Latency
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const elapsed = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} ${res.statusCode} (${elapsed}ms)`);
+  });
+  next();
+});
+
+// Mount Static Application and REST API Gateway
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/api', apiRouter);
+
+// Centralized Asynchronous Error Handler Middleware
+app.use((err, req, res, next) => {
+  console.error('[UNCAUGHT EXCEPTION]', err.stack);
+  res.status(500).json({ success: false, error: 'Internal Server Error', message: err.message });
+});
+
+app.listen(PORT, () => {
+  console.log(`CampusPulse Server active on port ${PORT} | Data store: ${store.mode}`);
+});</div>
+
+          <h3 class="subsection-heading">7.2 RESTful Workstation Allocation Controller (<code>routes/api.js</code>)</h3>
+          <p>
+            Validates student seat allocation requests, checks workstation concurrency status, calls the Supabase-backed store adapter, and records audit telemetry.
+          </p>
+
+          <div class="a4-code-snippet">// routes/api.js: Workstation Allocation Controller
+router.post('/lab-assets/:tag/allocate', asyncHandler(async (req, res) => {
+  const tag = req.params.tag.toUpperCase();
+  const { usn, studentName, purpose } = req.body;
+
+  if (!usn || !studentName) {
+    return res.status(400).json({ success: false, error: 'USN and name required.' });
+  }
+
+  const asset = await store.labAssets.findById(tag);
+  if (!asset) return res.status(404).json({ success: false, error: 'Workstation not found.' });
+  if (asset.status === 'occupied') {
+    return res.status(409).json({ success: false, error: `Occupied by ${asset.studentName}` });
+  }
+
+  const updatedAsset = await store.labAssets.updateStatus(tag, 'occupied', {
+    usn, studentName, currentProgram: purpose || 'Active SSWD Lab Session'
+  });
+
+  await store.allocations.create({
+    workstationTag: tag, seatNo: updatedAsset.seatNo, usn, studentName,
+    sessionPurpose: purpose || 'General SSWD Laboratory Practice'
+  });
+
+  await store.auditLogs.create({
+    action: 'WORKSTATION_ALLOCATED', actor: usn,
+    details: `Seat ${tag} assigned to ${studentName}`, ip: req.ip || '127.0.0.1'
+  });
+
+  res.status(200).json({ success: true, message: `Allocated ${tag}`, asset: updatedAsset });
+}));</div>
+        </div>
+
+        <div class="a4-running-footer">
+          <span>CampusPulse SSWD Report</span>
+          <span>Page 8 of 10</span>
+        </div>
+      </article>
+
+      <!-- ================= PAGE 9: TOPIC 7 (SOURCE CODE PART 2) ================= -->
+      <article class="a4-page" id="a4-page-9">
+        <div class="a4-running-header">
+          <span>CampusPulse SSWD Project Report</span>
+          <span>Section 7: Source Code Screenshots & Implementations (Part 2)</span>
+        </div>
+
+        <div class="a4-page-content">
+          <h2 class="section-heading">7. Screenshots of the source code (part 2)</h2>
+          <h3 class="subsection-heading">7.3 Grievance SLA Incident Dispatch &amp; Priority Triage (<code>models/supabase-db.js</code>)</h3>
+          <p>
+            Illustrates the auto-generation of unique human-readable ticket keys (e.g., <code>TKT-302-01</code>), SLA window calculation based on incident severity, and automatic workstation status escalation.
+          </p>
+
+          <div class="a4-code-snippet">// models/supabase-db.js: Grievance Incident & SLA Dispatcher
+async create(data) {
+  const ticketId = await nextTicketId();
+  const grievance = {
+    _id: newId('grv'), ticketId,
+    workstationTag: data.workstationTag,
+    studentUsn: data.studentUsn,
+    studentName: data.studentName,
+    category: data.category || 'Hardware',
+    priority: data.priority || 'Medium',
+    title: data.title, description: data.description,
+    status: 'PENDING', assignedTo: 'Admin 302',
+    // SLA Enforcement: Critical=60m, High=120m, Medium=240m
+    slaMinutes: data.priority === 'Critical' ? 60 : data.priority === 'High' ? 120 : 240,
+    resolutionNotes: ''
+  };
+
+  const result = await client.from('grievances')
+    .insert(grievanceToRow(grievance)).select().single();
+  const created = grievanceToApp(dataOf(result, 'Create grievance'));
+
+  // Flag the terminal for maintenance on High/Critical incidents
+  await incrementAssetIssue(data.workstationTag, grievance.priority);
+  await writeAudit({ action: 'GRIEVANCE_FILED', actor: data.studentUsn,
+    details: `Ticket ${ticketId} created for ${data.workstationTag}`, ip: '127.0.0.1' });
+
+  return created;
+}</div>
+
+          <h3 class="subsection-heading">7.4 Digital Journal Grading & Viva Verification Controller (<code>routes/api.js</code>)</h3>
+          <p>
+            Implements faculty sign-off, bounds checking on marks (0 to 10), state transition to <code>VERIFIED</code>, and security audit log recording.
+          </p>
+
+          <div class="a4-code-snippet">// routes/api.js: Faculty Journal Evaluation Controller
+router.patch('/journals/:id/grade', asyncHandler(async (req, res) => {
+  const { marks, comments, faculty } = req.body;
+  if (marks === undefined || isNaN(marks) || marks < 0 || marks > 10) {
+    return res.status(400).json({ success: false, error: 'Valid marks (0-10) required.' });
+  }
+
+  const graded = await store.journals.grade(
+    req.params.id,
+    parseFloat(marks),
+    comments || 'Verified in Laboratory Session',
+    faculty || 'Prof. Aruna Mam'
+  );
+
+  if (!graded) return res.status(404).json({ success: false, error: 'Submission not found.' });
+
+  res.status(200).json({
+    success: true,
+    message: `Program #${graded.programNumber} graded with ${marks}/10.`,
+    data: graded
+  });
+});</div>
+        </div>
+
+        <div class="a4-running-footer">
+          <span>CampusPulse SSWD Report</span>
+          <span>Page 9 of 10</span>
+        </div>
+      </article>
+
+      <!-- ================= PAGE 10: TOPIC 8 & CONCLUSION ================= -->
+      <article class="a4-page" id="a4-page-10">
+        <div class="a4-running-header">
+          <span>CampusPulse SSWD Project Report</span>
+          <span>Section 8: User Interface Screenshots & Conclusion</span>
+        </div>
+
+        <div class="a4-page-content">
+          <h2 class="section-heading">8. Screenshots of the user interface (UI)</h2>
+          
+          <div class="report-screenshot-grid">
+            <div class="a4-screenshot-container">
+              <div class="a4-screenshot-header">Fig 8.1: 40-Terminal Virtual Floor Grid (Lab 302)</div>
+              <div class="a4-screenshot-body report-mono-block">
+                [Podium: Prof. Aruna Mam Master Desk]<br>
+                [PC-01: Occupied Akash]  [PC-02..04: Occupied]<br>
+                [PC-05..07: Available]   [PC-08: Maintenance]<br>
+                [PC-14, 27, 35: Occupied] [PC-19: Maintenance]<br>
+                [PC-40: Offline (SMPS)]  [30 seats free]
+              </div>
+            </div>
+
+            <div class="a4-screenshot-container">
+              <div class="a4-screenshot-header">Fig 8.2: Grievance Resolution & SLA Desk</div>
+              <div class="a4-screenshot-body report-mono-block">
+                Ticket: TKT-302-01 | Seat: PC-08 | Priority: High<br>
+                Status: IN_REVIEW | SLA: 120m (Elapsed: 95m)<br>
+                Issue: Keyboard 3 keys intermittently failing<br>
+                Action: Dispatch Replacement from IT Storage
+              </div>
+            </div>
+
+            <div class="a4-screenshot-container">
+              <div class="a4-screenshot-header">Fig 8.3: Digital Journal Verification Desk</div>
+              <div class="a4-screenshot-body report-mono-block">
+                Program #14: Express Scaffolding & Routing<br>
+                Student: Akash (01FE25BCA209) | Plagiarism: 3.2%<br>
+                Marks: 10 / 10 | Status: VERIFIED<br>
+                Evaluated By: Prof. Aruna Mam (Signed Off)
+              </div>
+            </div>
+
+            <div class="a4-screenshot-container">
+              <div class="a4-screenshot-header">Fig 8.4: Operational Telemetry Analytics</div>
+              <div class="a4-screenshot-body report-mono-block">
+                [Chart.js Telemetry Engine]<br>
+                - Workstation Occupancy: 18% (7 of 40)<br>
+                - Journal Verification: 67% (4 of 6)<br>
+                - Grievance Distribution: 25% each category
+              </div>
+            </div>
+          </div>
+
+          <h2 class="section-heading">9. Conclusion &amp; future scope</h2>
+          <p>
+            <strong>CampusPulse</strong> successfully modernizes the Server Side Web Development laboratory experience for BCA Semester 3 at KLE Technological University. By converging real-time terminal telemetry, SLA-enforced grievance resolution, and an automated digital journal evaluation desk into an asynchronous Express.js architecture, the platform eradicates paper register overhead, minimizes workstation downtime, and delivers transparent academic accountability.
+          </p>
+          <p>
+            <strong>Future Enhancements:</strong> Future iterations will incorporate WebSocket bi-directional streaming for sub-second hardware heartbeat monitoring, Dockerized remote code sandboxing for automated test execution of student programs, and biometric facial authentication for automated seat check-ins.
+          </p>
+
+          <!-- Faculty Evaluator Sign-off Box -->
+          <div class="report-eval-box">
+            <div class="report-eval-row">
+              <div>
+                <div class="report-eval-title">Faculty evaluation and marks awarded</div>
+                <div class="report-signoff-meta">Course: Server Side Web Development (SSWD) Lab Journal Attachment</div>
+              </div>
+              <div class="report-eval-right">
+                <div class="report-marks">Marks: _____ / 20</div>
+                <div class="report-signoff-meta">Signature of Faculty Guide: Prof. Aruna Mam</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="a4-running-footer">
+          <span>CampusPulse SSWD Report</span>
+          <span>Page 10 of 10</span>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <div id="modal-workstation" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-pc-tag" aria-hidden="true">
+    <div class="modal-box">
+      <button class="modal-close" type="button" aria-label="Close workstation details">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10"></path><path d="M15 5L5 15"></path></svg>
+      </button>
+      <h3 id="modal-pc-tag" class="modal-title">PC-01</h3>
+      <p class="modal-sub" id="modal-pc-sub">Seat 1. Hardware and allocation profile</p>
+
+      <dl class="device-grid">
+        <dt>Status</dt><dd id="modal-pc-status">Available</dd>
+        <dt>IP address</dt><dd><code id="modal-pc-ip">192.168.302.101</code></dd>
+        <dt>Specifications</dt><dd id="modal-pc-specs">Intel i7, 16GB DDR4</dd>
+        <dt>Occupant</dt><dd id="modal-pc-user">Unassigned</dd>
+        <dt>Session task</dt><dd id="modal-pc-program">Idle</dd>
+      </dl>
+
+      <form id="form-allocate-workstation">
+        <h4 class="form-heading">Check in / allocate terminal</h4>
+        <div class="form-group">
+          <label class="form-label" for="alloc-usn">Student USN</label>
+          <input type="text" id="alloc-usn" class="form-control" placeholder="e.g. 01FE25BCA209" autocomplete="off" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="alloc-name">Student name</label>
+          <input type="text" id="alloc-name" class="form-control" placeholder="e.g. Akash" autocomplete="name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="alloc-purpose">Session purpose or lab program</label>
+          <input type="text" id="alloc-purpose" class="form-control" placeholder="e.g. SSWD Prg 28: Supabase Row Level Security" autocomplete="off">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Confirm allocation</button>
+        </div>
+      </form>
+
+      <p id="modal-unavailable" class="inline-note" hidden>This seat is not available for allocation while it is in maintenance or offline.</p>
+
+      <div class="release-row">
+        <button id="btn-release-workstation" class="btn btn-danger" type="button" hidden>
+          <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 10h12"></path>
+            <path d="M11 5l5 5-5 5"></path>
+          </svg>
+          <span id="release-label">Check out and release seat</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-grievance" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-grievance-title" aria-hidden="true">
+    <div class="modal-box">
+      <button class="modal-close" type="button" aria-label="Close grievance form">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10"></path><path d="M15 5L5 15"></path></svg>
+      </button>
+      <h3 id="modal-grievance-title" class="modal-title">Log laboratory incident ticket</h3>
+      <p class="modal-sub">The API assigns the SLA from the chosen priority.</p>
+
+      <form id="form-submit-grievance">
+        <div class="form-group">
+          <label class="form-label" for="grv-pc-tag">Workstation tag</label>
+          <select id="grv-pc-tag" class="form-control" required>
+            <option value="PC-01">PC-01 (Seat 1)</option>
+            <option value="PC-08">PC-08 (Seat 8)</option>
+            <option value="PC-12">PC-12 (Seat 12)</option>
+            <option value="PC-19">PC-19 (Seat 19)</option>
+            <option value="PC-25">PC-25 (Seat 25)</option>
+            <option value="PC-40">PC-40 (Seat 40)</option>
+          </select>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="grv-usn">Student USN</label>
+            <input type="text" id="grv-usn" class="form-control" placeholder="e.g. 01FE25BCA219" autocomplete="off" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="grv-name">Student name</label>
+            <input type="text" id="grv-name" class="form-control" placeholder="e.g. Akash" autocomplete="name" required>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="grv-category">Category</label>
+            <select id="grv-category" class="form-control">
+              <option value="Hardware">Hardware</option>
+              <option value="Software">Software</option>
+              <option value="Network">Network</option>
+              <option value="Peripheral">Peripheral</option>
+              <option value="Power">Power</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="grv-priority">Priority and SLA</label>
+            <select id="grv-priority" class="form-control">
+              <option value="Low">Low, 240 minutes</option>
+              <option value="Medium" selected>Medium, 240 minutes</option>
+              <option value="High">High, 120 minutes</option>
+              <option value="Critical">Critical, 60 minutes</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="grv-title">Incident summary</label>
+          <input type="text" id="grv-title" class="form-control" placeholder="e.g. Ethernet link flapping during npm build" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="grv-desc">Detailed symptoms</label>
+          <textarea id="grv-desc" class="form-control" rows="3" placeholder="Provide the system log or the exact error message." required></textarea>
+        </div>
+        <div class="ai-triage">
+          <div class="ai-triage-head">
+            <div>
+              <span class="ai-triage-label">Gemini triage</span>
+              <p class="ai-triage-copy">Classify the incident and draft three first-response steps before dispatch.</p>
+            </div>
+            <button type="button" id="btn-ai-triage" class="btn btn-secondary btn-small">Run AI triage</button>
+          </div>
+          <div id="ai-triage-result" class="ai-triage-result" role="status" aria-live="polite" hidden></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Dispatch ticket</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-grade" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-grade-title" aria-hidden="true">
+    <div class="modal-box">
+      <button class="modal-close" type="button" aria-label="Close grading form">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10"></path><path d="M15 5L5 15"></path></svg>
+      </button>
+      <h3 id="modal-grade-title" class="modal-title">Faculty viva voce &amp; code evaluation</h3>
+      <p id="grade-sub-info" class="modal-sub">Grading submission</p>
+
+      <form id="form-submit-grade">
+        <input type="hidden" id="grade-sub-id">
+        <div class="form-group">
+          <label class="form-label" for="grade-marks">Marks awarded (out of 10)</label>
+          <input type="number" id="grade-marks" class="form-control" min="0" max="10" step="0.5" placeholder="e.g. 9.5" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="grade-comments">Faculty remarks and feedback</label>
+          <textarea id="grade-comments" class="form-control" rows="3" placeholder="e.g. Clean middleware chaining and proper error propagation."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit evaluation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="false"></div>
+
+</body>
+</html>

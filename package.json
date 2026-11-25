@@ -1,0 +1,34 @@
+{
+  "name": "campuspulse-sswd-course-project",
+  "version": "1.0.0",
+  "description": "CampusPulse - Smart Campus Lab Resource, Grievance Resolution & Digital Journal Verification Platform for SSWD BCA Sem-3",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test.js",
+    "build": "node scripts/build-static.js",
+    "seed:supabase": "node scripts/seed-supabase.js",
+    "check:supabase": "node scripts/check-supabase.js"
+  },
+  "keywords": [
+    "sswd",
+    "bca",
+    "course-project",
+    "nodejs",
+    "express",
+    "supabase",
+    "postgresql",
+    "campuspulse"
+  ],
+  "author": "Akash (01FE25BCA209)",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.2",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}
